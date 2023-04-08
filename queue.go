@@ -20,8 +20,8 @@ type Queue[T any] struct {
 	producerCursor  atomic.Int64
 }
 
-// New creates a new Queue[T any] with the given size. The size must be a power of two.
-func New[T any](size uint) *Queue[T] {
+// NewQueue creates a new Queue[T any] with the given size. The size must be a power of two.
+func NewQueue[T any](size uint) *Queue[T] {
 	if !isPot(size) {
 		panic("size must be a power of two")
 	}

@@ -10,7 +10,7 @@ import (
 type testMsg struct{}
 
 func TestRingBufferSingleThread(t *testing.T) {
-	b := New[int](4)
+	b := NewQueue[int](4)
 
 	t.Run("empty queue must return false", func(t *testing.T) {
 		v, ok := b.Dequeue()
@@ -67,17 +67,17 @@ func TestRingBufferSingleThread(t *testing.T) {
 
 	t.Run("creating queues with invalid sizes must panic", func(t *testing.T) {
 		assert.Panics(t, func() {
-			_ = New[int](3)
+			_ = NewQueue[int](3)
 		})
 
 		assert.Panics(t, func() {
-			_ = New[int](0)
+			_ = NewQueue[int](0)
 		})
 	})
 }
 
 func TestRingBufferSPSC(t *testing.T) {
-	b := New[int](4)
+	b := NewQueue[int](4)
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -116,7 +116,7 @@ func TestRingBufferSPSC(t *testing.T) {
 }
 
 func BenchmarkRingBufferMPSC(b *testing.B) {
-	buf := New[testMsg](1024)
+	buf := NewQueue[testMsg](1024)
 
 	const producerCount = 4
 	countPerProducer := b.N
@@ -155,7 +155,7 @@ func BenchmarkRingBufferMPSC(b *testing.B) {
 }
 
 func BenchmarkRingBufferSPSC(b *testing.B) {
-	buf := New[testMsg](1024)
+	buf := NewQueue[testMsg](1024)
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
