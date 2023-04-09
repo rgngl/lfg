@@ -142,10 +142,10 @@ func BenchmarkRingBufferMPSC(b *testing.B) {
 
 			msg := &testMsg{}
 
-			for i := 0; i < countPerProducer; {
+			for j := 0; j < countPerProducer; {
 				ok := buf.Enqueue(msg)
 				if ok {
-					i++
+					j++
 				}
 			}
 		}()

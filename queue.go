@@ -5,7 +5,11 @@ package lfg
 import (
 	"sync/atomic"
 	"unsafe"
+
+	"golang.org/x/sys/cpu"
 )
+
+const cacheLinesize = unsafe.Sizeof(cpu.CacheLinePad{})
 
 // Queue[T any] is a lock-free, multiple-producer, multiple-consumer queue.
 type Queue[T any] struct {
@@ -13,10 +17,14 @@ type Queue[T any] struct {
 
 	mask int64
 
+	_               [cacheLinesize]byte
 	consumerBarrier atomic.Int64
+	_               [cacheLinesize]byte
 	consumerCursor  atomic.Int64
 
+	_               [cacheLinesize]byte
 	producerBarrier atomic.Int64
+	_               [cacheLinesize]byte
 	producerCursor  atomic.Int64
 }
 
