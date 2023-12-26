@@ -15,54 +15,54 @@ func TestRingBufferSingleThread(t *testing.T) {
 	t.Run("empty queue must return false", func(t *testing.T) {
 		v, ok := b.Dequeue()
 		assert.False(t, ok)
-		assert.Nil(t, v)
+		assert.Zero(t, v)
 	})
 
 	t.Run("enqueue one and dequeue one", func(t *testing.T) {
-		ok := b.Enqueue(intPtr(0))
+		ok := b.Enqueue(0)
 		assert.True(t, ok)
 
 		v, ok := b.Dequeue()
 		assert.True(t, ok)
-		assert.Equal(t, 0, *v)
+		assert.Equal(t, 0, v)
 	})
 
 	t.Run("enqueue until buffer is full", func(t *testing.T) {
-		ok := b.Enqueue(intPtr(1))
+		ok := b.Enqueue(1)
 		assert.True(t, ok)
-		ok = b.Enqueue(intPtr(2))
+		ok = b.Enqueue(2)
 		assert.True(t, ok)
-		ok = b.Enqueue(intPtr(3))
+		ok = b.Enqueue(3)
 		assert.True(t, ok)
-		ok = b.Enqueue(intPtr(4))
+		ok = b.Enqueue(4)
 		assert.False(t, ok)
 	})
 
 	t.Run("dequeue one and check value", func(t *testing.T) {
 		v, ok := b.Dequeue()
 		assert.True(t, ok)
-		assert.Equal(t, 1, *v)
+		assert.Equal(t, 1, v)
 	})
 
-	t.Run("enqueing one after dequeueing one must succeed", func(t *testing.T) {
-		ok := b.Enqueue(intPtr(5))
+	t.Run("enqueuing one after dequeueing one must succeed", func(t *testing.T) {
+		ok := b.Enqueue(5)
 		assert.True(t, ok)
 	})
 
 	t.Run("dequeue until buffer is empty", func(t *testing.T) {
 		v, ok := b.Dequeue()
 		assert.True(t, ok)
-		assert.Equal(t, 2, *v)
+		assert.Equal(t, 2, v)
 		v, ok = b.Dequeue()
 		assert.True(t, ok)
-		assert.Equal(t, 3, *v)
+		assert.Equal(t, 3, v)
 		v, ok = b.Dequeue()
 		assert.True(t, ok)
-		assert.Equal(t, 5, *v)
+		assert.Equal(t, 5, v)
 
 		v, ok = b.Dequeue()
 		assert.False(t, ok)
-		assert.Nil(t, v)
+		assert.Zero(t, v)
 	})
 
 	t.Run("creating queues with invalid sizes must panic", func(t *testing.T) {
@@ -77,18 +77,18 @@ func TestRingBufferSingleThread(t *testing.T) {
 }
 
 func TestRingBufferSPSC(t *testing.T) {
-	b := NewQueue[int](4)
+	b := NewQueue[int](128)
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
-	count := 1_000
+	count := 1_000_000
 
 	go func() {
 		defer wg.Done()
 
 		for i := 0; i < count; {
-			ok := b.Enqueue(intPtr(i))
+			ok := b.Enqueue(i)
 			if ok {
 				i++
 			}
@@ -104,7 +104,7 @@ func TestRingBufferSPSC(t *testing.T) {
 			v, ok := b.Dequeue()
 			if ok {
 				i++
-				if expected != *v {
+				if expected != v {
 					panic("unexpected value")
 				}
 				expected++
@@ -116,7 +116,7 @@ func TestRingBufferSPSC(t *testing.T) {
 }
 
 func BenchmarkRingBufferMPSC(b *testing.B) {
-	buf := NewQueue[testMsg](1024)
+	buf := NewQueue[*testMsg](1024)
 
 	const producerCount = 4
 	countPerProducer := b.N
@@ -155,7 +155,7 @@ func BenchmarkRingBufferMPSC(b *testing.B) {
 }
 
 func BenchmarkRingBufferSPSC(b *testing.B) {
-	buf := NewQueue[testMsg](1024)
+	buf := NewQueue[*testMsg](1024)
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -187,8 +187,4 @@ func BenchmarkRingBufferSPSC(b *testing.B) {
 	}()
 
 	wg.Wait()
-}
-
-func intPtr(i int) *int {
-	return &i
 }

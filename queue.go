@@ -1,30 +1,26 @@
 // Package lfg implements a lock-free, multiple-producer, multiple-consumer queue.
-// Queue[T any] is a generic type, where the items added to the queue are of type *T.
 package lfg
 
 import (
 	"sync/atomic"
-	"unsafe"
 
 	"golang.org/x/sys/cpu"
 )
 
-const cacheLinesize = unsafe.Sizeof(cpu.CacheLinePad{})
-
 // Queue[T any] is a lock-free, multiple-producer, multiple-consumer queue.
 type Queue[T any] struct {
-	buf []*T
+	buf []T
 
 	mask int64
 
-	_               [cacheLinesize]byte
+	_               cpu.CacheLinePad
 	consumerBarrier atomic.Int64
-	_               [cacheLinesize]byte
+	_               cpu.CacheLinePad
 	consumerCursor  atomic.Int64
 
-	_               [cacheLinesize]byte
+	_               cpu.CacheLinePad
 	producerBarrier atomic.Int64
-	_               [cacheLinesize]byte
+	_               cpu.CacheLinePad
 	producerCursor  atomic.Int64
 }
 
@@ -35,13 +31,13 @@ func NewQueue[T any](size uint) *Queue[T] {
 	}
 
 	return &Queue[T]{
-		buf:  make([]*T, size),
+		buf:  make([]T, size),
 		mask: int64(size - 1),
 	}
 }
 
 // Enqueue adds an item to the queue. It returns false if the buffer is full.
-func (b *Queue[T]) Enqueue(v *T) bool {
+func (b *Queue[T]) Enqueue(v T) bool {
 	var pc, cb int64
 
 	for {
@@ -57,7 +53,7 @@ func (b *Queue[T]) Enqueue(v *T) bool {
 		}
 	}
 
-	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&b.buf[(pc+1)&b.mask])), unsafe.Pointer(v))
+	b.buf[(pc+1)&b.mask] = v
 
 	for {
 		if b.producerBarrier.CompareAndSwap(pc, pc+1) {
@@ -69,7 +65,7 @@ func (b *Queue[T]) Enqueue(v *T) bool {
 }
 
 // Dequeue removes an item from the queue. It returns false if the buffer is empty.
-func (b *Queue[T]) Dequeue() (*T, bool) {
+func (b *Queue[T]) Dequeue() (T, bool) {
 	var cc, pb int64
 
 	for {
@@ -77,7 +73,8 @@ func (b *Queue[T]) Dequeue() (*T, bool) {
 		pb = b.producerBarrier.Load()
 
 		if pb == cc {
-			return nil, false
+			var zero T
+			return zero, false
 		}
 
 		if b.consumerCursor.CompareAndSwap(cc, cc+1) {
@@ -85,7 +82,7 @@ func (b *Queue[T]) Dequeue() (*T, bool) {
 		}
 	}
 
-	v := atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&b.buf[(cc+1)&b.mask])))
+	v := b.buf[(cc+1)&b.mask]
 
 	for {
 		if b.consumerBarrier.CompareAndSwap(cc, cc+1) {
@@ -93,7 +90,7 @@ func (b *Queue[T]) Dequeue() (*T, bool) {
 		}
 	}
 
-	return (*T)(v), true
+	return v, true
 }
 
 func isPot(n uint) bool {
